@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: sans-serif; font-size: 11pt; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 14px; }
+  td, th { border: 1px solid #999; padding: 4px 6px; text-align: left; }
+  .bad { color: #b00020; font-weight: bold; }
+  .sim { position: fixed; bottom: 0; left: 0; right: 0;
+         text-align: center; font-size: 9pt; color: #b00020; }
+</style>
+</head>
+<body>
+
+<div class="sim">
+  SIMULATED DATA - lab pribadi, bukan data operasional
+</div>
+
+<h1>Laporan Insiden {{ days }} Hari Terakhir</h1>
+<p>
+  Periode: {{ start.strftime('%Y-%m-%d') }}
+  s.d. {{ end.strftime('%Y-%m-%d') }} (UTC)
+</p>
+
+<h2>Ringkasan</h2>
+<p>
+  Tercatat {{ d.total }} insiden. Rata-rata waktu deteksi (MTTD)
+  {{ d.mttd }} menit dan rata-rata waktu pemulihan (MTTR)
+  {{ d.mttr }} menit.
+  {{ d.services | selectattr('breach') | list | length }}
+  layanan berada di bawah target SLA.
+</p>
+
+<table>
+  <tr>
+    <th>P1</th><th>P2</th><th>P3</th><th>P4</th>
+  </tr>
+  <tr>
+    <td>{{ d.by_priority.P1 }}</td>
+    <td>{{ d.by_priority.P2 }}</td>
+    <td>{{ d.by_priority.P3 }}</td>
+    <td>{{ d.by_priority.P4 }}</td>
+  </tr>
+</table>
+
+<h2>Availability vs SLA</h2>
+<table>
+  <tr>
+    <th>Perangkat</th><th>Layanan</th>
+    <th>Availability %</th><th>Target %</th><th>Status</th>
+  </tr>
+  {% for s in d.services %}
+  <tr>
+    <td>{{ s.host }}</td>
+    <td>{{ s.service }}</td>
+    <td>{{ s.availability }}</td>
+    <td>{{ s.target }}</td>
+    <td class="{{ 'bad' if s.breach else '' }}">
+      {{ 'MELANGGAR' if s.breach else 'OK' }}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h2>5 Insiden Terlama</h2>
+<table>
+  <tr>
+    <th>Kode</th><th>Perangkat</th><th>Prioritas</th>
+    <th>Durasi (mnt)</th><th>Dampak</th><th>RCA</th>
+  </tr>
+  {% for t in d.top %}
+  <tr>
+    <td>{{ t.code }}</td>
+    <td>{{ t.host }}</td>
+    <td>{{ t.priority }}</td>
+    <td>{{ t.duration }}</td>
+    <td>{{ t.customers }}</td>
+    <td>{{ t.rca }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h2>Rekomendasi</h2>
+<ul>
+  <li><strong>Fokus pada Perbaikan Perangkat IPTV dan OLT:</strong> Seluruh layanan (FTTH, IPTV, B2B) berada di bawah target SLA. Perangkat IPTV-HEAD memiliki availability terendah (98.958%) dan mendominasi 3 dari 5 insiden terlama. Disarankan melakukan audit preventif (preventive maintenance) serta menyiapkan redundansi jalur (failover) pada perangkat Headend dan OLT untuk mencegah downtime berkepanjangan.</li>
+  
+  <li><strong>Optimasi Penanganan Insiden P1 (MTTR):</strong> Meskipun rata-rata MTTD sangat baik (3.4 menit), rata-rata MTTR mencapai 29.1 menit dengan insiden terlama mencapai 60 menit. Mengingat 85% insiden (35 dari 41) berstatus P1, perlu dibuat Standard Operating Procedure (SOP) khusus untuk penanganan P1 (misalnya target maksimal *restore time* 30 menit) dan memastikan ketersediaan suku cadang (spare parts) di lokasi strategis agar engineer tidak menunggu lama.</li>
+  
+  <li><strong>Evaluasi Aturan Korelasi dan Alerting:</strong> Dengan 35 insiden P1 dalam 28 hari, tim NOC berisiko mengalami *alert fatigue*. Disarankan untuk meninjau ulang *threshold* (ambang batas) dan aturan prioritas (P1-P4), memastikan bahwa label P1 hanya diberikan pada gangguan berskala masif, sehingga tim on-call dapat lebih fokus dan responsif terhadap insiden yang benar-benar kritikal.</li>
+</ul>
+
+</body>
+</html>
